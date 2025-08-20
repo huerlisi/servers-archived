@@ -17,12 +17,14 @@ interface ListChannelsArgs {
 interface PostMessageArgs {
   channel_id: string;
   text: string;
+  mrkdwn?: boolean;
 }
 
 interface ReplyToThreadArgs {
   channel_id: string;
   thread_ts: string;
   text: string;
+  mrkdwn?: boolean;
 }
 
 interface AddReactionArgs {
@@ -73,7 +75,7 @@ const listChannelsTool: Tool = {
 
 const postMessageTool: Tool = {
   name: "slack_post_message",
-  description: "Post a new message to a Slack channel",
+  description: "Post a new message to a Slack channel with mrkdwn formatting support",
   inputSchema: {
     type: "object",
     properties: {
@@ -83,7 +85,12 @@ const postMessageTool: Tool = {
       },
       text: {
         type: "string",
-        description: "The message text to post",
+        description: "The message text to post (supports mrkdwn formatting by default)",
+      },
+      mrkdwn: {
+        type: "boolean",
+        description: "Enable mrkdwn formatting (default: true). Set to false to disable formatting",
+        default: true,
       },
     },
     required: ["channel_id", "text"],
@@ -92,7 +99,7 @@ const postMessageTool: Tool = {
 
 const replyToThreadTool: Tool = {
   name: "slack_reply_to_thread",
-  description: "Reply to a specific message thread in Slack",
+  description: "Reply to a specific message thread in Slack with mrkdwn formatting support",
   inputSchema: {
     type: "object",
     properties: {
@@ -106,7 +113,12 @@ const replyToThreadTool: Tool = {
       },
       text: {
         type: "string",
-        description: "The reply text",
+        description: "The reply text (supports mrkdwn formatting by default)",
+      },
+      mrkdwn: {
+        type: "boolean",
+        description: "Enable mrkdwn formatting (default: true). Set to false to disable formatting",
+        default: true,
       },
     },
     required: ["channel_id", "thread_ts", "text"],
@@ -268,13 +280,14 @@ class SlackClient {
     };
   }
 
-  async postMessage(channel_id: string, text: string): Promise<any> {
+  async postMessage(channel_id: string, text: string, mrkdwn: boolean = true): Promise<any> {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: this.botHeaders,
       body: JSON.stringify({
         channel: channel_id,
         text: text,
+        mrkdwn: mrkdwn,
       }),
     });
 
@@ -285,6 +298,7 @@ class SlackClient {
     channel_id: string,
     thread_ts: string,
     text: string,
+    mrkdwn: boolean = true,
   ): Promise<any> {
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
@@ -293,6 +307,7 @@ class SlackClient {
         channel: channel_id,
         thread_ts: thread_ts,
         text: text,
+        mrkdwn: mrkdwn,
       }),
     });
 
@@ -438,6 +453,7 @@ async function main() {
             const response = await slackClient.postMessage(
               args.channel_id,
               args.text,
+              args.mrkdwn !== false,
             );
             return {
               content: [{ type: "text", text: JSON.stringify(response) }],
@@ -456,6 +472,7 @@ async function main() {
               args.channel_id,
               args.thread_ts,
               args.text,
+              args.mrkdwn !== false,
             );
             return {
               content: [{ type: "text", text: JSON.stringify(response) }],
